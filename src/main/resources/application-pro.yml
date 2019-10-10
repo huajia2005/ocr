@@ -1,0 +1,54 @@
+server:
+  port: 8099
+  max-http-header-size: -1
+#spring:
+#  datasource:
+#      name: test
+#      driver-class-name: com.mysql.jdbc.Driver
+#      url: jdbc:mysql://192.168.0.150:3306/keyword?serverTimezone=UTC&useUnicode=true&characterEncoding=utf8&allowMultiQueries=true
+#      username: root
+#      password: 123456
+#      # 使用druid数据源
+#      type: com.alibaba.druid.pool.DruidDataSource
+#      filters: stat
+#      maxActive: 20
+#      initialSize: 1
+#      maxWait: 60000
+#      minIdle: 1
+#      timeBetweenEvictionRunsMillis: 60000
+#      minEvictableIdleTimeMillis: 300000
+#      validationQuery: select 'x'
+#      testWhileIdle: true
+#      testOnBorrow: false
+#      testOnReturn: false
+#      poolPreparedStatements: true
+#      maxOpenPreparedStatements: 20
+
+##以下配置为日志配置,config为配置日志xml地址
+logging:
+  #  config: classpath:logback-spring.xml
+  path: /bigdata/log
+imagePath: /bigdata/errorimagefile
+#imagePath: E:\\test\\errImages
+##imagePath: C:\Users\Lenovo\Desktop\文字图片\
+
+##保存txt的文件夹路径
+txtPath: /bigdata/txtfile
+#txtPath: E:\\test\\textFile
+##txtPath: C:\Users\Lenovo\Desktop\txt文件\
+
+##ansj分词的自定义关键字词库路径
+userLibraryPath: /bigdata/userLibrary.dic
+#userLibraryPath: E:\\test\\library\\userLibrary.dic
+##ansj分词的自定义停用词词库路径
+stopLibraryPath: /bigdata/stopLibrary.dic
+#stopLibraryPath: E:\\test\\library\\stopLibrary.dic
+##shell脚本路径
+shellPath: /opt/submit_spark_batch.sh
+
+##与app组对接秘钥key
+secretKey: 1ab107d9a2e53710405d56b28073d334ea064c7b
+
+##用于ftp存放图片路径，映射服务器路径
+ftpSaveImagePath: /bigdata/imagefile
+#ftpSaveImagePath: E:\\test\\images
