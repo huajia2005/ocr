@@ -3,6 +3,7 @@ package com.baidu.aip.run.service;
 import com.baidu.aip.ocr.AipOcr;
 import com.baidu.aip.run.entity.AppInfo;
 import com.baidu.aip.run.entity.Response;
+import com.baidu.aip.run.mapper.OcrMapper;
 import com.baidu.aip.util.AnsjTest;
 import com.baidu.aip.util.CheckResult;
 import com.baidu.aip.util.FileUtil;
@@ -10,17 +11,15 @@ import com.baidu.aip.util.ZhStringUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.annotation.Order;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.Resource;
 import java.io.*;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 /**
  * @version 1.0
@@ -33,8 +32,11 @@ import java.util.Objects;
 @Service
 @EnableScheduling
 public class OcrServices {
-    @Autowired
+    @Resource
     private AnsjTest ansjTest;
+
+    @Resource
+    private OcrMapper ocrMapper;
 
     @Value("${imagePath}")
     private String errImagePath;
@@ -51,6 +53,24 @@ public class OcrServices {
     /**用于记录账号的顺序*/
     private Integer id = 0;
     private List<AppInfo> appInfoList = AppInfo.getAppInfoList();
+    private Map<String, String> map;
+    {
+        map = new HashMap<>();
+        try {
+            FileReader fr = new FileReader("E:\\test\\新建文本文档.txt");
+            BufferedReader bf = new BufferedReader(fr);
+            String str;
+            // 按行读取字符串
+            while ((str = bf.readLine()) != null) {
+                String[] a = str.split(":");
+                map.put(a[1],a[0]);
+            }
+            bf.close();
+            fr.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
     public Response body() throws Exception {
         Response response = new Response();
         //判断，如账户是否用完用完则不往下走
@@ -78,16 +98,22 @@ public class OcrServices {
                 fileList[i].delete();
                 continue;
             }
-            //提取百度的ai接口返回的数据
-            String content = getReturnContent(res, imageName);
-            if (Objects.equals(content,"")) {
+            //提取百度的ai接口返回的数据放入list中
+            List<String> splitWordList = getReturnContent(res);
+            //对结果list进行关键字匹配和拼接
+            String content = processList(splitWordList, imageName);
+            if (Objects.equals("", content)) {
                 log.info("图片" + imagePath + "没有被提取到文字");
                 //将图片转存到错误文件夹
                 FileUtil.copyFile(imagePath, errImagePath + File.separator + imageName);
                 fileList[i].delete();
                 continue;
             }
-           // String[] split1 = imageName.split("\\.");
+            if (Objects.equals("-1", content)) {
+                log.info("图片" + imagePath + "以匹配关键词");
+                fileList[i].delete();
+                continue;
+            }
             String txtName = imageName.substring(0,imageName.lastIndexOf("."));
             // 创建txt文本的路径
             String txtFilePath = txtPath + File.separator + txtName + ".txt";
@@ -105,12 +131,13 @@ public class OcrServices {
         File[] txtFiles = new File(txtPath).listFiles();
         if (null == txtFiles || txtFiles.length < 1) {
             response.setCode(200);
-            response.setMsg("图片识别运行成功,无text文件生成!");
+            response.setMsg("图片识别运行成功,无txt文件生成!");
             return response;
         }
         if (transferTxtShell()) {
+            log.info("图片识别运行成功,调用脚本处理text失败!");
             response.setCode(200);
-            response.setMsg("运行失败,调用脚本处理text文件错误!");
+            response.setMsg("运行失败,调用脚本处理txt文件错误!");
             return response;
         }
         for (File txtFile : txtFiles) {
@@ -118,7 +145,7 @@ public class OcrServices {
         }
         log.info("删除txt文件成功");
         response.setCode(200);
-        response.setMsg("图片识别运行成功,调用脚本处理text文件成功!");
+        response.setMsg("图片识别运行成功,调用脚本处理txt文件成功!");
         return response;
     }
 
@@ -136,7 +163,7 @@ public class OcrServices {
         // 调用接口
         JSONObject res = client.basicAccurateGeneral(imagePath, new HashMap<>(3));
         // 检测服务端返回结果
-        Integer checkResult = CheckResult.checkresult(res, id);
+        int checkResult = CheckResult.checkresult(res, id);
         if (checkResult != 0) {
             if (checkResult == 2) {
                 appInfoList.remove(appInfoList.get(id));
@@ -224,11 +251,10 @@ public class OcrServices {
      * @Param [jsonObject, imageName]
      * @return java.lang.String
      */
-    private String getReturnContent(JSONObject jsonObject, String imageName) {
-        String content = "";
-        StringBuilder stringBuilder = new StringBuilder();
+    private List<String> getReturnContent(JSONObject jsonObject) {
         JSONArray jsonArray = (JSONArray) jsonObject.get("words_result");
         log.info("收到的返回值为：" + jsonArray.toString());
+        List<String> splitWordList = new ArrayList<>();
         // 遍历jsonarray
         if (jsonArray.length() > 0) {
             for (int j = 0; j < jsonArray.length(); j++) {
@@ -240,22 +266,67 @@ public class OcrServices {
                     continue;
                 }
                 String[] split = splitWords.split(" ");
-                for (String s : split) {
-                    if ("".equals(s) || "".equals(s.replaceAll(" ", ""))) {
-                        continue;
-                    }
-                    stringBuilder.append(filterWord(s.replaceAll(" ", ""))).append(" ");
-                }
+                Collections.addAll(splitWordList, split);
             }
-            // 先将多个空格替换成一个空格在去掉末尾的空格
-            content = stringBuilder.toString().replaceAll("\\s+", " ").trim();
-            log.info("分词后的content为:" + content);
-            if (Objects.equals(content, "")) {
-                return content;
-            }
-            content = "1 "+imageName + "," + content;
         }
+        return splitWordList;
+    }
+
+    /**
+     * 对分词后的list进行关键词匹配
+     * @Author xuhongchun
+     * @Description
+     * @Date 9:46 2019/10/11
+     * @Param [splitWordList, imageName]
+     * @return java.lang.String
+     */
+    private String processList(List<String> splitWordList, String imageName) {
+        if (splitWordList.size() < 1) {
+            return "";
+        }
+        StringBuilder stringBuilder = new StringBuilder();
+        /*对分词后的list进行循环匹配,成功则入库,并跳过检测图片的剩余步骤
+         * 失败则追加到content等待接下来的处理
+         */
+        for (String word : splitWordList) {
+            if ("".equals(word) || "".equals(word.replaceAll(" ", ""))) {
+                continue;
+            }
+            word = filterWord(word.replaceAll(" ", ""));
+            if (Objects.equals("", word)) {
+                continue;
+            }
+            String sort = map.get(word);
+            if (sort == null) {
+                stringBuilder.append(word);
+                continue;
+            }
+            //匹配成功,进行入库操作
+            storageImage(imageName, sort);
+            return "-1";
+        }
+        String content = stringBuilder.toString().replaceAll("\\s+", " ").trim();
+        log.info("分词后的content为:" + content);
+        if (Objects.equals(content, "")) {
+            return content;
+        }
+        content = "1 "+imageName + "," + content;
         return content;
+    }
+
+    /**
+     * 将违规信息入库
+     * @Author xuhongchun
+     * @Description
+     * @Date 13:38 2019/10/11
+     * @Param [imageName, sort]
+     * @return int
+     */
+    private void storageImage (String imageName, String sort) {
+        int insertCount = ocrMapper.insertViolationRecord(imageName, sort);
+        if (insertCount > 0) {
+            log.info("图片" + imageName + "成功入库");
+        }
     }
 
     /**
@@ -275,16 +346,11 @@ public class OcrServices {
             Long b = System.currentTimeMillis();
             log.info("执行脚本时间:" + (b-a));
             returnCode = ps.exitValue();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (InterruptedException e) {
+        } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
         log.info("脚本返回值:"+returnCode);
-        if (returnCode == -1 || returnCode == 200) {
-            return true;
-        }
-     return false;
+        return returnCode == -1 || returnCode == 200;
     }
 
     /**

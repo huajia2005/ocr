@@ -1,6 +1,7 @@
 server:
   port: 8099
   max-http-header-size: -1
+
 #spring:
 #  datasource:
 #      name: test
@@ -52,3 +53,12 @@ secretKey: 1ab107d9a2e53710405d56b28073d334ea064c7b
 ##用于ftp存放图片路径，映射服务器路径
 #ftpSaveImagePath: /bigdata/imagefile
 ftpSaveImagePath: E:\\test\\images
+mybatis:
+  config-location: classpath:mybatis/mybatis-config.xml
+  mapper-locations: classpath:mybatis/mapper/*.xml
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/apptest?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&useSSL=true&zeroDateTimeBehavior=convertToNull&allowMultiQueries=true
+    username: root
+    password: thexhc.com

@@ -74,7 +74,7 @@ public class AnsjTest {
 			List<Term> termList = result.getTerms();
 			for (Term term : termList) {
 //			System.out.println(term.getName() + ":" + term.getNatureStr());
-				System.out.println(term.getName());
+//				System.out.println(term.getName());
 				stringBuffer.append(term.getName()+" ");
 			}
 			return stringBuffer.toString();
