@@ -50,6 +50,11 @@ public class OcrServices {
     @Value("${ftpSaveImagePath}")
     private String ftpSaveImagePath;
 
+    @Value("${txtShellPath}")
+    private String txtShellPath;
+
+    @Value("${keyWordPath}")
+    private String keyWordPath;
     /**用于记录账号的顺序*/
     private Integer id = 0;
     private List<AppInfo> appInfoList = AppInfo.getAppInfoList();
@@ -57,7 +62,8 @@ public class OcrServices {
     {
         map = new HashMap<>();
         try {
-            FileReader fr = new FileReader("E:\\test\\新建文本文档.txt");
+            FileReader fr = new FileReader("/bigdata/keywords.txt");
+          //  FileReader fr = new FileReader("E:\\test\\kywords.txt");
             BufferedReader bf = new BufferedReader(fr);
             String str;
             // 按行读取字符串
@@ -75,6 +81,10 @@ public class OcrServices {
         Response response = new Response();
         //判断，如账户是否用完用完则不往下走
         if (appInfoList.size() == 0) {
+            log.info("今天账号的免费使用次数以用完!");
+            Process  ps = Runtime.getRuntime().exec(txtShellPath);
+            ps.waitFor();
+            response.setCode(200);
             response.setMsg("您今天的免费次数已用完！");
             return response;
         }
@@ -82,36 +92,48 @@ public class OcrServices {
         File file = new File(ftpSaveImagePath);
         File[] fileList = file.listFiles();
         for (int i = 0; i < fileList.length; i++) {
+            log.info("------------开始处理第" + i + "张图片------------");
             log.info("现在使用的id账号为s：" + id);
             String imagePath = fileList[i].getPath();
             String imageName = fileList[i].getName();
             //调用百度接口识别图片
+            long aa = System.currentTimeMillis();
             JSONObject res = transferInterface(imagePath);
+            long bb = System.currentTimeMillis();
+            log.info("调用百度接口耗时:" + (bb-aa) + "毫秒");
             if (null == res) {
-                log.info("现在使用的id账号为s：" + id);
-                continue;
+                log.info("今天账号的免费使用次数以用完!");
+                Process  ps = Runtime.getRuntime().exec(txtShellPath);
+                ps.waitFor();
+                break;
             }
             // 假如图片上的文字没有被提取到，那么将该图片放入一个指定的文件夹存放并将原文件删除
             if (!res.toString().contains("words_result") || !CheckResult.checkSDK(res, imagePath)) {
                 log.info("图片" + imagePath + "没有被提取到文字");
                 FileUtil.copyFile(imagePath, errImagePath + File.separator + imageName);
                 fileList[i].delete();
+                moreAccount();
                 continue;
             }
             //提取百度的ai接口返回的数据放入list中
             List<String> splitWordList = getReturnContent(res);
             //对结果list进行关键字匹配和拼接
+            long a = System.currentTimeMillis();
             String content = processList(splitWordList, imageName);
+            long b = System.currentTimeMillis();
+            log.info("关键词匹配用时:" + (b-a) + "毫秒");
             if (Objects.equals("", content)) {
                 log.info("图片" + imagePath + "没有被提取到文字");
                 //将图片转存到错误文件夹
                 FileUtil.copyFile(imagePath, errImagePath + File.separator + imageName);
                 fileList[i].delete();
+                moreAccount();
                 continue;
             }
             if (Objects.equals("-1", content)) {
                 log.info("图片" + imagePath + "以匹配关键词");
                 fileList[i].delete();
+                moreAccount();
                 continue;
             }
             String txtName = imageName.substring(0,imageName.lastIndexOf("."));
@@ -121,11 +143,7 @@ public class OcrServices {
             createTxt(content, txtFilePath);
             //删除图片以及txt
             fileList[i].delete();
-            if (id == appInfoList.size() - 1) {
-                id = 0;
-            } else {
-                id++;
-            }
+            moreAccount();
             log.info("第" + (i + 1) + "条数据ocr识别完成！");
         }
         File[] txtFiles = new File(txtPath).listFiles();
@@ -298,11 +316,11 @@ public class OcrServices {
             }
             String sort = map.get(word);
             if (sort == null) {
-                stringBuilder.append(word);
+                stringBuilder.append(word).append(" ");
                 continue;
             }
             //匹配成功,进行入库操作
-            storageImage(imageName, sort);
+            storageImage(imageName, sort, word);
             return "-1";
         }
         String content = stringBuilder.toString().replaceAll("\\s+", " ").trim();
@@ -322,10 +340,14 @@ public class OcrServices {
      * @Param [imageName, sort]
      * @return int
      */
-    private void storageImage (String imageName, String sort) {
-        int insertCount = ocrMapper.insertViolationRecord(imageName, sort);
-        if (insertCount > 0) {
-            log.info("图片" + imageName + "成功入库");
+    private void storageImage (String imageName, String sort, String word) {
+        String[] sorts = sort.split(",");
+        for (String s : sorts) {
+            String[] gradings = s.split("-");
+            int insertCount = ocrMapper.insertViolationRecords(imageName, Double.parseDouble(gradings[0]), gradings[1], word);
+            if (insertCount > 0) {
+                log.info("图片" + imageName + "成功入库");
+            }
         }
     }
 
@@ -367,5 +389,22 @@ public class OcrServices {
         id = 0;
         appInfoList = AppInfo.getAppInfoList();
         log.info("定时任务开始执行成功!");
+    }
+
+    /**
+     * 将百度接口调用id+1
+     * @Author xuhongchun
+     * @Description
+     * @Date 14:04 2019/10/21
+     * @Param []
+     * @return void
+     * @throws
+     */
+    private void moreAccount() {
+        if (id == appInfoList.size() - 1) {
+            id = 0;
+        } else {
+            id++;
+        }
     }
 }

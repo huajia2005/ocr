@@ -16,5 +16,5 @@ public interface OcrMapper {
      * @Param [imageName, sort]
      * @return int
      */
-    int insertViolationRecord(String imageName, String sort);
+    int insertViolationRecords(String imageName, double sort, String secondary, String word);
 }

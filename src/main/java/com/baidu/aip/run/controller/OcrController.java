@@ -55,7 +55,10 @@ public class OcrController {
 	@ResponseBody
 	public String test () {
 		try {
+		    long a = System.currentTimeMillis();
 			Response response = ocrServices.body();
+			long b = System.currentTimeMillis();
+            System.out.println(b-a);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
