@@ -92,7 +92,7 @@ public class OcrServices {
         File file = new File(ftpSaveImagePath);
         File[] fileList = file.listFiles();
         for (int i = 0; i < fileList.length; i++) {
-            log.info("------------开始处理第" + i + "张图片------------");
+            log.info("------------开始处理第" + (i + 1) + "张图片------------");
             log.info("现在使用的id账号为s：" + id);
             String imagePath = fileList[i].getPath();
             String imageName = fileList[i].getName();

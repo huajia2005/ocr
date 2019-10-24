@@ -8,9 +8,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.ResponseBody;
+
+import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.URL;
 
 @Controller
 @Slf4j
@@ -19,6 +24,9 @@ public class OcrController {
     private OcrServices ocrServices;
 	@Value("${secretKey}")
 	private String secretKey;
+
+	@Value("${pingUrl}")
+	private String pingUrl;
 
 	/**
 	 * 该接口暂时不用，图片已上传到ftp服务器
@@ -64,4 +72,34 @@ public class OcrController {
 		}
 		return "success";
 	}
+
+	/**
+	 * 测试集群是否健康
+	 * @Author xuhongchun
+	 * @Description
+	 * @Date 16:08 2019/10/24
+	 * @Param []
+	 * @return boolean
+	 */
+	@GetMapping("ping")
+	@ResponseBody
+	public boolean ping() {
+		Integer code = null;
+		HttpURLConnection connection = null;
+		try {
+			URL realUrl = new URL(pingUrl);
+			connection = (HttpURLConnection) realUrl.openConnection();
+			connection.setRequestMethod("GET");
+			code = connection.getResponseCode();
+		} catch (IOException e) {
+			log.info("访问请求失败!");
+			e.printStackTrace();
+		} finally {
+			if (null != connection) {
+				connection.disconnect();
+			}
+		}
+		return null != code && HttpURLConnection.HTTP_OK == code;
+	}
+
 }

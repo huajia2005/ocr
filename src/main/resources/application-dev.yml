@@ -55,6 +55,7 @@ secretKey: 1ab107d9a2e53710405d56b28073d334ea064c7b
 ftpSaveImagePath: E:\\test\\images
 txtShellPath : /bigdata/submit_spark_batch.sh
 keyWordPath : E:\\test\\kywords.txt
+pingUrl: http://127.0.0.1:8099/pings
 mybatis:
   config-location: classpath:mybatis/mybatis-config.xml
   mapper-locations: classpath:mybatis/mapper/*.xml

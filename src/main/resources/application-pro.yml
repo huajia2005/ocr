@@ -54,6 +54,7 @@ ftpSaveImagePath: /bigdata/imagefile
 #ftpSaveImagePath: E:\\test\\images
 txtShellPath : /bigdata/moveimage.sh
 keyWordPath : E:\\test\\kywords.txt
+pingUrl: http://192.168.11.111:8080
 mybatis:
   config-location: classpath:mybatis/mybatis-config.xml
   mapper-locations: classpath:mybatis/mapper/*.xml
