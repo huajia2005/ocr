@@ -30,7 +30,7 @@ server:
 ##  config: classpath:logback-spring.xml
 #  path: /bigdata/log
 #imagePath: /bigdata/errorimagefile
-imagePath: E:\\test\\errImages
+errImagePath: E:\\test\\errImages
 ##imagePath: C:\Users\Lenovo\Desktop\文字图片\
 
 ##保存txt的文件夹路径
@@ -52,7 +52,7 @@ secretKey: 1ab107d9a2e53710405d56b28073d334ea064c7b
 
 ##用于ftp存放图片路径，映射服务器路径
 #ftpSaveImagePath: /bigdata/imagefile
-ftpSaveImagePath: E:\\test\\images
+imagePath: E:\\test\\images
 txtShellPath : /bigdata/submit_spark_batch.sh
 keyWordPath : E:\\test\\kywords.txt
 pingUrl: http://127.0.0.1:8099/pings
