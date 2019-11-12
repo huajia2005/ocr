@@ -4,11 +4,12 @@ import com.baidu.aip.ocr.AipOcr;
 import com.baidu.aip.run.entity.AppInfo;
 import com.baidu.aip.run.entity.Response;
 import com.baidu.aip.run.mapper.OcrMapper;
-import com.baidu.aip.util.AnsjTest;
+import com.baidu.aip.run.util.WordUtil;
 import com.baidu.aip.util.CheckResult;
 import com.baidu.aip.util.FileUtil;
 import com.baidu.aip.util.ZhStringUtil;
 import lombok.extern.slf4j.Slf4j;
+import org.apdplat.word.segmentation.Word;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Value;
@@ -22,7 +23,8 @@ import java.io.*;
 import java.util.*;
 
 /**
- * OCR识别并用ansj分词进行分割
+ * OCR识别并用word分词进行分割
+ *
  * @version 1.0
  * @ClassName OcrServices
  * @Author Administrator
@@ -32,10 +34,7 @@ import java.util.*;
 @Order(value = 1)
 @Service
 @EnableScheduling
-public class OcrServicesAnsj {
-    @Resource
-    private AnsjTest ansjTest;
-
+public class OcrServicesWord {
     @Resource
     private OcrMapper ocrMapper;
 
@@ -54,8 +53,6 @@ public class OcrServicesAnsj {
     @Value("${txtShellPath}")
     private String txtShellPath;
 
-    @Value("${keyWordPath}")
-    private String keyWordPath;
     /**
      * 用于记录账号的顺序
      */
@@ -64,7 +61,7 @@ public class OcrServicesAnsj {
     private Map<String, String> map;
 
     //项目启动时加载txt中的关键词放到map中供匹配
-     {
+    {
         map = new HashMap<>();
         try {
             FileReader fr = new FileReader("/bigdata/keywords.txt");
@@ -130,7 +127,7 @@ public class OcrServicesAnsj {
                 continue;
             }
             //提取百度的ai接口返回的数据放入list中
-            List<String> splitWordList = getReturnContent(res);
+            List<Word> splitWordList = getReturnContent(res);
             //对结果list进行关键字匹配和拼接
             long a = System.currentTimeMillis();
             String content = processList(splitWordList, imageName);
@@ -246,7 +243,7 @@ public class OcrServicesAnsj {
      * @Date 11:39 2019/9/26
      * @Param [word]
      */
-    private String filterWord(String word) {
+    public String filterWord(String word) {
         String result = "";
         if ("cm".equals(word) || "c".equals(word) || "kg".equals(word)) {
             return result;
@@ -293,22 +290,17 @@ public class OcrServicesAnsj {
      * @Date 14:05 2019/9/26
      * @Param [jsonObject, imageName]
      */
-    private List<String> getReturnContent(JSONObject jsonObject) {
+    private List<Word> getReturnContent(JSONObject jsonObject) {
         JSONArray jsonArray = (JSONArray) jsonObject.get("words_result");
         log.info("收到的返回值为：" + jsonArray.toString());
-        List<String> splitWordList = new ArrayList<>();
+        List<Word> splitWordList = new ArrayList<>();
         // 遍历jsonarray
         if (jsonArray.length() > 0) {
             for (int j = 0; j < jsonArray.length(); j++) {
                 // 遍历 jsonarray 数组，把每一个对象转成 json 对象
                 JSONObject json = jsonArray.getJSONObject(j);
-                // 调用ansj分词插件进行分词
-                String splitWords = ansjTest.splitWords(json.get("words").toString());
-                if (splitWords == null || splitWords.length() == 0) {
-                    continue;
-                }
-                String[] split = splitWords.split(" ");
-                Collections.addAll(splitWordList, split);
+                List<Word> splits = WordUtil.splitWords(json.getString("words"));
+                splitWordList.addAll(splits);
             }
         }
         return splitWordList;
@@ -323,7 +315,7 @@ public class OcrServicesAnsj {
      * @Date 9:46 2019/10/11
      * @Param [splitWordList, imageName]
      */
-    private String processList(List<String> splitWordList, String imageName) {
+    private String processList(List<Word> splitWordList, String imageName) {
         if (splitWordList.size() < 1) {
             return "";
         }
@@ -331,7 +323,8 @@ public class OcrServicesAnsj {
         /*对分词后的list进行循环匹配,成功则入库,并跳过检测图片的剩余步骤
          * 失败则追加到content等待接下来的处理
          */
-        for (String word : splitWordList) {
+        for (Word words : splitWordList) {
+            String word = words.getText();
             if ("".equals(word) || "".equals(word.replaceAll(" ", ""))) {
                 continue;
             }

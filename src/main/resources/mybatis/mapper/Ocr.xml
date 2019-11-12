@@ -2,10 +2,10 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.baidu.aip.run.mapper.OcrMapper">
 
-    <insert id="insertViolationRecords">
+    <insert id="insertViolationRecord">
         insert into ocr(imagename, sort, sec, word) values (#{imageName},#{sort}, #{secondary}, #{word})
     </insert>
-    <insert id="insertViolationRecord">
+    <insert id="insertViolationRecords">
         insert into MLResult(file_name, predict_category, two_Catalog, keyword) values (#{imageName},${sort}, #{secondary}, #{word})
     </insert>
 </mapper>

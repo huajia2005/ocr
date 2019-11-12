@@ -109,7 +109,7 @@ public class OcrController {
     public String test() {
         try {
             long a = System.currentTimeMillis();
-            Response response = ocrServices.body();
+            Response response = ocrServicesWord.body();
             long b = System.currentTimeMillis();
             System.out.println(b - a);
         } catch (Exception e) {
